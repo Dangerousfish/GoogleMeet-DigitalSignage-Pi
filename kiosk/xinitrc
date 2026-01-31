@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+#
+# X session startup script for the kiosk user. This starts the minimal
+# window manager (Openbox) and the kiosk browser script.
+
+set -e
+
+# Start Openbox in the background for window management.
+openbox-session &
+
+# Launch the kiosk script. Pass through any arguments to allow overriding
+# the target URL from startx.
+"$(dirname "$0")/kiosk.sh" "$@"

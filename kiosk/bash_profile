@@ -1,0 +1,12 @@
+# ~/.bash_profile for kiosk user
+#
+# Automatically start X11 on tty1 when logging into the console. This
+# ensures that the kiosk launches without requiring any user intervention.
+
+if [ -z "${SSH_TTY:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
+  # Only start X if it isn't already running. This avoids spawning
+  # additional sessions if the user logs in manually on tty1 after boot.
+  if ! pgrep -x Xorg >/dev/null; then
+    startx -- -nocursor
+  fi
+fi
