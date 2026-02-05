@@ -7,9 +7,9 @@ avoid exposing sensitive information. All credentials and settings are
 provided via the ``Settings`` object in ``app.config``.
 
 The functions here are deliberately synchronous because the service runs on
-a Raspberry Pi with limited resources and because the Google API client
-libraries are blocking. Should you choose to move to an async implementation
-in the future, these functions can be adapted accordingly.
+resource‑constrained devices such as the Raspberry Pi. Should you choose to
+move to an async implementation in the future, these functions can be
+adapted accordingly.
 """
 
 from __future__ import annotations

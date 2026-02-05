@@ -34,7 +34,11 @@ class Settings(BaseSettings):
     refresh_seconds: int = Field(
         default=60,
         alias="REFRESH_SECONDS",
-        description="Interval (in seconds) between free/busy polls. Minimum 30 recommended on Pi 3.",
+        description=(
+            "Interval (in seconds) between free/busy polls. "
+            "Minimum 30 is recommended on a Raspberry Pi 4 Model B (8 GB) "
+            "to avoid API throttling."
+        ),
     )
     soon_minutes: int = Field(
         default=10,

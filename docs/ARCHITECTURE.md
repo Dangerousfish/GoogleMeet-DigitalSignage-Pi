@@ -24,7 +24,7 @@ system.
 ### Wallboard UI
 
 * A single HTML page served by the backend (`/`).
-* Written without frameworks (plain JS + CSS) for maximum Pi 3 performance.
+* Written without frameworks (plain JS + CSS) for maximum Raspberry Pi performance.
 * Polls the `/api/status` endpoint every `REFRESH_SECONDS` seconds and
   updates the grid of room tiles.
 * Provides dropdowns to filter by building and floor; defaults to a
@@ -32,10 +32,15 @@ system.
 
 ### Raspberry Pi kiosk
 
-* Runs Raspberry Pi OS Lite with a minimal X11 environment.
-* Launches Chromium in kiosk mode via `~kiosk/kiosk.sh`.
-* Autologins the `kiosk` user on tty1, starts X and hides the mouse cursor.
-* Points Chromium at `http://127.0.0.1:8080/` (the wallboard).
+* Runs Raspberry Pi OS Desktop with the LXDE environment. There is no need to
+  install X11 or a separate window manager on the desktop image.
+* Launches Chromium in kiosk mode via `~kiosk/kiosk.sh` (started by
+  LXSession autostart). The script disables screen blanking, hides the cursor
+  and starts Chromium with suitable flags.
+* Configures the `kiosk` user to autologin via the Desktop login manager
+  (e.g. using `raspi-config`). LXDE’s autostart file launches the kiosk script
+  when the user session begins.
+* Points Chromium at `http://127.0.0.1:8080/` (the wallboard) and hides the mouse.
 
 ### Systemd service
 

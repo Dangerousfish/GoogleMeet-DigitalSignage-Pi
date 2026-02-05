@@ -1,14 +1,14 @@
-# Install on Raspberry Pi OS Lite
+# Install on Raspberry Pi OS Desktop
 
-This document describes how to install and configure the room signage
-solution on a single Raspberry Pi 4 Model B (8 GB) running Raspberry Pi OS Lite.
-The Pi hosts both the backend service and the kiosk browser. The same steps
-also work on a Pi 3, but the Pi 4 with 8 GB of RAM is recommended for
-smoother browser performance.
+This guide explains how to install and configure the room signage solution on
+a Raspberry Pi 4 Model B (8 GB) running Raspberry Pi OS Desktop (Bookworm or later).
+The Desktop variant provides a full graphical environment (LXDE) so you don’t
+need to set up X11 manually. The same steps will also work on a Pi 3, but the
+extra RAM of the Pi 4 is recommended for smoother browser performance.
 
 ## Prerequisites
 - Raspberry Pi 4 Model B (8 GB)
-- Raspberry Pi OS Lite installed (tested on Bookworm)
+- Raspberry Pi OS Desktop (latest stable release) installed
 - Basic familiarity with the terminal
 
 ## Steps
@@ -23,8 +23,9 @@ smoother browser performance.
 
 2. **Create users and directories**
 
-   Create two system users: one for the API service (`roomsign`) and one for
-   the kiosk (`kiosk`).
+   Create a system account for the API service (`roomsign`) and optionally
+   a separate account for the kiosk (`kiosk`). Running the kiosk as its own user
+   keeps file permissions tidy.
 
    ```bash
    sudo adduser --disabled-password --gecos "" roomsign
@@ -38,13 +39,12 @@ smoother browser performance.
 
 3. **Install packages**
 
-   The Pi needs Python, Chromium, X11 and a lightweight window manager:
+   On the Desktop image most graphical components are already installed.
+   You only need Python and Chromium:
 
    ```bash
    sudo apt install -y \
      python3 python3-venv python3-pip \
-     libatlas-base-dev ca-certificates \
-     xserver-xorg x11-xserver-utils xinit openbox \
      chromium-browser unclutter \
      fonts-dejavu-core
    ```
@@ -52,6 +52,7 @@ smoother browser performance.
 4. **Backend setup**
 
    Create a Python virtual environment and install the dependencies.
+   Run these commands as the `roomsign` user:
 
    ```bash
    sudo -u roomsign python3 -m venv /opt/room-signage/venv
@@ -69,7 +70,7 @@ smoother browser performance.
 
 6. **Systemd service**
 
-   Install the provided systemd unit file into `/etc/systemd/system/room-signage.service`:
+   Install the provided systemd unit file into `/etc/systemd/system/room-signage.service` and enable it:
 
    ```ini
    [Unit]
@@ -91,7 +92,7 @@ smoother browser performance.
    WantedBy=multi-user.target
    ```
 
-   Enable and start the service:
+   Reload systemd and start the service:
 
    ```bash
    sudo systemctl daemon-reload
@@ -100,23 +101,37 @@ smoother browser performance.
 
 7. **Kiosk setup**
 
-   Configure the Pi to autologin as the `kiosk` user on the console, start X and launch Chromium.
+   Configure the Pi to autologin as the `kiosk` user into the desktop session and
+   launch Chromium in kiosk mode at boot:
 
-   - Create `/home/kiosk/kiosk.sh` script as described in the README.
-   - Create `.xinitrc` and `.bash_profile` for the `kiosk` user.
-   - Use an agetty override to autologin on tty1.
+   - Enable auto‑login for the `kiosk` user via `sudo raspi-config` → System Options → Boot / Auto Login → Desktop Autologin.
+   - Copy `kiosk/kiosk.sh` from this repository to `/home/kiosk/kiosk.sh` and make it executable (`chmod +x`).
+   - Create an autostart file so LXDE runs the kiosk script on login. For the
+     `kiosk` user, create a file at `/home/kiosk/.config/lxsession/LXDE-pi/autostart` containing:
+
+     ```
+     @lxpanel --profile LXDE-pi
+     @pcmanfm --desktop --profile LXDE-pi
+     @bash -c "/home/kiosk/kiosk.sh"
+     ```
+
+     The first two lines are standard for LXDE; the last line launches the
+     kiosk script. The script will hide the mouse cursor (`unclutter`) and
+     start Chromium in kiosk mode pointing at the local wallboard.
+
+   - Ensure the file is owned by `kiosk` and has correct permissions.
 
 8. **Reboot and test**
 
-   After everything is in place, reboot the Pi. On boot, the API should start on
-   `127.0.0.1:8080` and the kiosk should display the wallboard page.
+   Reboot the Pi. On boot, the API should start on `127.0.0.1:8080` and the
+   kiosk user should log in automatically and display the wallboard page.
 
 ## Updating
 
 To update the code, pull the latest repository contents and replace the
 `/opt/room-signage/app` directory. Then restart the systemd service:
 
-```bash
+```
 sudo systemctl restart room-signage.service
 ```
 
@@ -124,12 +139,17 @@ sudo systemctl restart room-signage.service
 
 If the screen is blank, check that the backend is running:
 
-```bash
+```
 curl -s http://127.0.0.1:8080/healthz
 ```
 
 If that fails, view the service logs:
 
-```bash
+```
 sudo journalctl -u room-signage.service -n 50 --no-pager
 ```
+
+---
+
+This document covers the Raspberry Pi OS Desktop setup. For Raspberry Pi OS
+Lite instructions, see `docs/INSTALL_PI_LITE.md`.

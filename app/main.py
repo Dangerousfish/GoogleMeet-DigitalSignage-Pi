@@ -237,241 +237,255 @@ def signage_page() -> HTMLResponse:
     # CSS variables for easy theme customisation.
     css_vars = """
     :root {
-      --bg: #0b0d12;
-      --fg: #e9eefc;
-      --tile-bg: rgba(255,255,255,0.04);
-      --tile-border: rgba(255,255,255,0.10);
-      --busy-bg: rgba(255, 60, 80, 0.12);
-      --busy-border: rgba(255, 60, 80, 0.30);
-      --soon-bg: rgba(255, 200, 70, 0.10);
-      --soon-border: rgba(255, 200, 70, 0.30);
-      --free-bg: rgba(70, 220, 140, 0.10);
-      --free-border: rgba(70, 220, 140, 0.28);
+      /* Site-wide colour palette.
+       *
+       * The base background is a dark greenish tone (#293d32) for high
+       * contrast in bright office spaces. Primary text is pure white to aid
+       * legibility at a distance. A single highlight colour (#ff8fa2) is used
+       * for accent elements; it tints the “busy” and “soon” states without
+       * relying on multiple unrelated colours. Neutral tile backgrounds and
+       * borders use low‑opacity white to subtly lift them off the page.
+       */
+      --bg: #293d32;
+      --fg: #ffffff;
+      /* Base tile background and border colours. */
+      --tile-bg: rgba(255,255,255,0.05);
+      --tile-border: rgba(255,255,255,0.15);
+      /* Busy/occupied state colours derived from the highlight colour. */
+      --busy-bg: rgba(255, 143, 162, 0.15);
+      --busy-border: rgba(255, 143, 162, 0.45);
+      /* Soon/booking soon state colours – slightly lighter than busy. */
+      --soon-bg: rgba(255, 143, 162, 0.08);
+      --soon-border: rgba(255, 143, 162, 0.25);
+      /* Free/vacant state colours use neutral tones to avoid colour clutter. */
+      --free-bg: rgba(255,255,255,0.05);
+      --free-border: rgba(255,255,255,0.15);
+      /* Typography sizing. */
       --title-size: 24px;
       --room-name-size: 20px;
       --tile-min-height: 140px;
     }
     """
     html = f"""
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Room Signage</title>
-  <style>
-    {{css_vars}}
-    body {{
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial;
-      background: var(--bg);
-      color: var(--fg);
-    }}
-    header {{
-      display: flex;
-      gap: 16px;
-      align-items: baseline;
-      padding: 18px 22px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }}
-    h1 {{ margin: 0; font-size: var(--title-size); font-weight: 650; letter-spacing: 0.2px; }}
-    .meta {{ opacity: 0.8; font-size: 14px; }}
-    .filters {{
-      display: flex; gap: 10px; margin-left: auto; align-items: center;
-    }}
-    select {{
-      background: #121728; color: var(--fg); border: 1px solid rgba(255,255,255,0.12);
-      padding: 10px 12px; border-radius: 12px; font-size: 14px;
-    }}
-    main {{ padding: 18px 22px 28px; }}
-    .grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 14px;
-    }}
-    .tile {{
-      border-radius: 16px;
-      padding: 16px 16px 14px;
-      border: 1px solid var(--tile-border);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-      background: var(--tile-bg);
-      min-height: var(--tile-min-height);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }}
-    .topline {{
-      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
-    }}
-    .name {{ font-size: var(--room-name-size); font-weight: 700; line-height: 1.15; }}
-    .tag {{
-      font-size: 12px; padding: 7px 10px; border-radius: 999px; white-space: nowrap;
-      border: 1px solid rgba(255,255,255,0.14); opacity: 0.95;
-    }}
-    .sub {{
-      margin-top: 8px; font-size: 13px; opacity: 0.86;
-      display: flex; gap: 10px; flex-wrap: wrap;
-    }}
-    .bottom {{
-      display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
-      margin-top: 14px; font-size: 13px; opacity: 0.86;
-    }}
-    .errorbar {{
-      margin: 14px 22px 0;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255, 165, 0, 0.10);
-      font-size: 13px;
-    }}
-    .busy {{ background: var(--busy-bg); border-color: var(--busy-border); }}
-    .free {{ background: var(--free-bg); border-color: var(--free-border); }}
-    .soon {{ background: var(--soon-bg); border-color: var(--soon-border); }}
-    .muted {{ opacity: 0.75; }}
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Meeting rooms</h1>
-    <div class="meta" id="meta">Loading…</div>
-    <div class="filters">
-      <select id="building"></select>
-      <select id="floor"></select>
-    </div>
-  </header>
-  <div id="error" class="errorbar" style="display:none;"></div>
-  <main>
-    <div class="grid" id="grid"></div>
-  </main>
-<script>
-const REFRESH_MS = {settings.refresh_seconds} * 1000;
-const DEFAULT_BUILDING = {json.dumps(settings.default_building_id or "")} ;
+ <!doctype html>
+ <html lang="en">
+ <head>
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <title>Room Signage</title>
+   <style>
+     {{css_vars}}
+     body {{
+       margin: 0;
+       font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial;
+       background: var(--bg);
+       color: var(--fg);
+     }}
+     header {{
+       display: flex;
+       gap: 16px;
+       align-items: baseline;
+       padding: 18px 22px;
+       border-bottom: 1px solid rgba(255,255,255,0.08);
+     }}
+     h1 {{ margin: 0; font-size: var(--title-size); font-weight: 650; letter-spacing: 0.2px; }}
+     .meta {{ opacity: 0.8; font-size: 14px; }}
+     .filters {{
+       display: flex; gap: 10px; margin-left: auto; align-items: center;
+     }}
+     select {{
+       background: #121728; color: var(--fg); border: 1px solid rgba(255,255,255,0.12);
+       padding: 10px 12px; border-radius: 12px; font-size: 14px;
+     }}
+     main {{ padding: 18px 22px 28px; }}
+     .grid {{
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+       gap: 14px;
+     }}
+     .tile {{
+       border-radius: 16px;
+       padding: 16px 16px 14px;
+       border: 1px solid var(--tile-border);
+       box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+       background: var(--tile-bg);
+       min-height: var(--tile-min-height);
+       display: flex;
+       flex-direction: column;
+       justify-content: space-between;
+     }}
+     .topline {{
+       display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+     }}
+     .name {{ font-size: var(--room-name-size); font-weight: 700; line-height: 1.15; }}
+     .tag {{
+       font-size: 12px; padding: 7px 10px; border-radius: 999px; white-space: nowrap;
+       border: 1px solid rgba(255,255,255,0.14); opacity: 0.95;
+     }}
+     .sub {{
+       margin-top: 8px; font-size: 13px; opacity: 0.86;
+       display: flex; gap: 10px; flex-wrap: wrap;
+     }}
+     .bottom {{
+       display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+       margin-top: 14px; font-size: 13px; opacity: 0.86;
+     }}
+     .errorbar {{
+       margin: 14px 22px 0;
+       padding: 10px 12px;
+       border-radius: 12px;
+       border: 1px solid rgba(255,255,255,0.14);
+       background: rgba(255, 165, 0, 0.10);
+       font-size: 13px;
+     }}
+     .busy {{ background: var(--busy-bg); border-color: var(--busy-border); }}
+     .free {{ background: var(--free-bg); border-color: var(--free-border); }}
+     .soon {{ background: var(--soon-bg); border-color: var(--soon-border); }}
+     .muted {{ opacity: 0.75; }}
+   </style>
+ </head>
+ <body>
+   <header>
+     <h1>Meeting rooms</h1>
+     <div class="meta" id="meta">Loading…</div>
+     <div class="filters">
+       <select id="building"></select>
+       <select id="floor"></select>
+     </div>
+   </header>
+   <div id="error" class="errorbar" style="display:none;"></div>
+   <main>
+     <div class="grid" id="grid"></div>
+   </main>
+ <script>
+ const REFRESH_MS = {settings.refresh_seconds} * 1000;
+ const DEFAULT_BUILDING = {json.dumps(settings.default_building_id or "")} ;
 
-function uniq(arr) {{
-  return [...new Set(arr.filter(x => x !== null && x !== undefined && String(x).trim() !== ""))];
-}}
-function isoToLocal(iso) {{
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], {{hour: '2-digit', minute: '2-digit'}});
-}}
-function setSelectOptions(sel, values, placeholder) {{
-  sel.innerHTML = "";
-  const opt0 = document.createElement("option");
-  opt0.value = "";
-  opt0.textContent = placeholder;
-  sel.appendChild(opt0);
-  values.forEach(v => {{
-    const o = document.createElement("option");
-    o.value = v;
-    o.textContent = v;
-    sel.appendChild(o);
-  }});
-}}
-function tileClass(item) {{
-  if (item.isBusyNow) return "tile busy";
-  if (item.isSoon) return "tile soon";
-  return "tile free";
-}}
-function statusTag(item) {{
-  if (item.isBusyNow) return "Occupied";
-  if (item.isSoon) return "Booked soon";
-  return "Vacant";
-}}
-function nextLine(item) {{
-  if (!item.nextChangeIso) return "No upcoming bookings";
-  const t = isoToLocal(item.nextChangeIso);
-  if (item.isBusyNow) return `Free at ${t}`;
-  return `Booked at ${t}`;
-}}
-function render(items) {{
-  const grid = document.getElementById("grid");
-  const bSel = document.getElementById("building");
-  const fSel = document.getElementById("floor");
-  const b = bSel.value;
-  const f = fSel.value;
-  let filtered = items;
-  if (b) filtered = filtered.filter(x => (x.buildingId || "") === b);
-  if (f) filtered = filtered.filter(x => (x.floorName || "") === f);
-  grid.innerHTML = "";
-  filtered.forEach(item => {{
-    const div = document.createElement("div");
-    div.className = tileClass(item);
-    const top = document.createElement("div");
-    top.className = "topline";
-    const left = document.createElement("div");
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = item.roomName;
-    left.appendChild(name);
-    const sub = document.createElement("div");
-    sub.className = "sub";
-    const parts = [];
-    if (item.buildingId) parts.push(`Building: ${item.buildingId}`);
-    if (item.floorName) parts.push(`Floor: ${item.floorName}`);
-    if (item.capacity) parts.push(`Capacity: ${item.capacity}`);
-    sub.textContent = parts.join(" · ");
-    left.appendChild(sub);
-    const tag = document.createElement("div");
-    tag.className = "tag";
-    tag.textContent = statusTag(item);
-    top.appendChild(left);
-    top.appendChild(tag);
-    const bottom = document.createElement("div");
-    bottom.className = "bottom";
-    const next = document.createElement("div");
-    next.textContent = nextLine(item);
-    const hint = document.createElement("div");
-    hint.className = "muted";
-    hint.textContent = item.isBusyNow ? "In a meeting" : (item.isSoon ? "Get ready" : "Available now");
-    bottom.appendChild(next);
-    bottom.appendChild(hint);
-    div.appendChild(top);
-    div.appendChild(bottom);
-    grid.appendChild(div);
-  }});
-}}
-async function refresh() {{
-  try {{
-    const r = await fetch("/api/status", {{cache: "no-store"}});
-    const data = await r.json();
-    const meta = document.getElementById("meta");
-    const err = document.getElementById("error");
-    meta.textContent = `Updated ${new Date(data.generatedAt).toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}})} · refresh ${data.refreshSeconds}s · soon ${data.soonMinutes}m`;
-    if (data.lastError) {{
-      err.style.display = "block";
-      err.textContent = `Warning: ${data.lastError}`;
-    }} else {{
-      err.style.display = "none";
-      err.textContent = "";
-    }}
-    const items = data.items || [];
-    const buildings = uniq(items.map(x => x.buildingId));
-    const floors = uniq(items.map(x => x.floorName));
-    const bSel = document.getElementById("building");
-    const fSel = document.getElementById("floor");
-    const prevB = bSel.value;
-    const prevF = fSel.value;
-    setSelectOptions(bSel, buildings, "All buildings");
-    setSelectOptions(fSel, floors, "All floors");
-    if (buildings.includes(prevB)) bSel.value = prevB;
-    if (floors.includes(prevF)) fSel.value = prevF;
-    if (!bSel.value && DEFAULT_BUILDING && buildings.includes(DEFAULT_BUILDING)) {{
-      bSel.value = DEFAULT_BUILDING;
-    }}
-    render(items);
-  }} catch (e) {{
-    const err = document.getElementById("error");
-    err.style.display = "block";
-    err.textContent = `Warning: failed to refresh: ${e}`;
-  }}
-}}
-document.getElementById("building").addEventListener("change", refresh);
-document.getElementById("floor").addEventListener("change", refresh);
-refresh();
-setInterval(refresh, REFRESH_MS);
-</script>
-</body>
-</html>
-"""  # noqa: E501
+ function uniq(arr) {{
+   return [...new Set(arr.filter(x => x !== null && x !== undefined && String(x).trim() !== ""))];
+ }}
+ function isoToLocal(iso) {{
+   if (!iso) return "";
+   const d = new Date(iso);
+   return d.toLocaleTimeString([], {{hour: '2-digit', minute: '2-digit'}});
+ }}
+ function setSelectOptions(sel, values, placeholder) {{
+   sel.innerHTML = "";
+   const opt0 = document.createElement("option");
+   opt0.value = "";
+   opt0.textContent = placeholder;
+   sel.appendChild(opt0);
+   values.forEach(v => {{
+     const o = document.createElement("option");
+     o.value = v;
+     o.textContent = v;
+     sel.appendChild(o);
+   }});
+ }}
+ function tileClass(item) {{
+   if (item.isBusyNow) return "tile busy";
+   if (item.isSoon) return "tile soon";
+   return "tile free";
+ }}
+ function statusTag(item) {{
+   if (item.isBusyNow) return "Occupied";
+   if (item.isSoon) return "Booked soon";
+   return "Vacant";
+ }}
+ function nextLine(item) {{
+   if (!item.nextChangeIso) return "No upcoming bookings";
+   const t = isoToLocal(item.nextChangeIso);
+   if (item.isBusyNow) return `Free at ${t}`;
+   return `Booked at ${t}`;
+ }}
+ function render(items) {{
+   const grid = document.getElementById("grid");
+   const bSel = document.getElementById("building");
+   const fSel = document.getElementById("floor");
+   const b = bSel.value;
+   const f = fSel.value;
+   let filtered = items;
+   if (b) filtered = filtered.filter(x => (x.buildingId || "") === b);
+   if (f) filtered = filtered.filter(x => (x.floorName || "") === f);
+   grid.innerHTML = "";
+   filtered.forEach(item => {{
+     const div = document.createElement("div");
+     div.className = tileClass(item);
+     const top = document.createElement("div");
+     top.className = "topline";
+     const left = document.createElement("div");
+     const name = document.createElement("div");
+     name.className = "name";
+     name.textContent = item.roomName;
+     left.appendChild(name);
+     const sub = document.createElement("div");
+     sub.className = "sub";
+     const parts = [];
+     if (item.buildingId) parts.push(`Building: ${item.buildingId}`);
+     if (item.floorName) parts.push(`Floor: ${item.floorName}`);
+     if (item.capacity) parts.push(`Capacity: ${item.capacity}`);
+     sub.textContent = parts.join(" · ");
+     left.appendChild(sub);
+     const tag = document.createElement("div");
+     tag.className = "tag";
+     tag.textContent = statusTag(item);
+     top.appendChild(left);
+     top.appendChild(tag);
+     const bottom = document.createElement("div");
+     bottom.className = "bottom";
+     const next = document.createElement("div");
+     next.textContent = nextLine(item);
+     const hint = document.createElement("div");
+     hint.className = "muted";
+     hint.textContent = item.isBusyNow ? "In a meeting" : (item.isSoon ? "Get ready" : "Available now");
+     bottom.appendChild(next);
+     bottom.appendChild(hint);
+     div.appendChild(top);
+     div.appendChild(bottom);
+     grid.appendChild(div);
+   }});
+ }}
+ async function refresh() {{
+   try {{
+     const r = await fetch("/api/status", {{cache: "no-store"}});
+     const data = await r.json();
+     const meta = document.getElementById("meta");
+     const err = document.getElementById("error");
+     meta.textContent = `Updated ${new Date(data.generatedAt).toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}})} · refresh ${data.refreshSeconds}s · soon ${data.soonMinutes}m`;
+     if (data.lastError) {{
+       err.style.display = "block";
+       err.textContent = `Warning: ${data.lastError}`;
+     }} else {{
+       err.style.display = "none";
+       err.textContent = "";
+     }}
+     const items = data.items || [];
+     const buildings = uniq(items.map(x => x.buildingId));
+     const floors = uniq(items.map(x => x.floorName));
+     const bSel = document.getElementById("building");
+     const fSel = document.getElementById("floor");
+     const prevB = bSel.value;
+     const prevF = fSel.value;
+     setSelectOptions(bSel, buildings, "All buildings");
+     setSelectOptions(fSel, floors, "All floors");
+     if (buildings.includes(prevB)) bSel.value = prevB;
+     if (floors.includes(prevF)) fSel.value = prevF;
+     if (!bSel.value && DEFAULT_BUILDING && buildings.includes(DEFAULT_BUILDING)) {{
+       bSel.value = DEFAULT_BUILDING;
+     }}
+     render(items);
+   }} catch (e) {{
+     const err = document.getElementById("error");
+     err.style.display = "block";
+     err.textContent = `Warning: failed to refresh: ${e}`;
+   }}
+ }}
+ document.getElementById("building").addEventListener("change", refresh);
+ document.getElementById("floor").addEventListener("change", refresh);
+ refresh();
+ setInterval(refresh, REFRESH_MS);
+ </script>
+ </body>
+ </html>
+ """  # noqa: E501
     return HTMLResponse(content=html.replace("{css_vars}", css_vars))

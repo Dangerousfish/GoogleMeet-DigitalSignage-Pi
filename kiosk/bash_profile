@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # ~/.bash_profile for kiosk user
 #
 # Automatically start X11 on tty1 when logging into the console. This
