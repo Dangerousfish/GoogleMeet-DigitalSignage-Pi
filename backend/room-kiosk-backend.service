@@ -1,0 +1,19 @@
+[Unit]
+Description=Room Kiosk Backend (Google Calendar FreeBusy)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kiosk
+WorkingDirectory=/opt/room-kiosk
+# Load environment variables from .env in WorkingDirectory
+EnvironmentFile=/opt/room-kiosk/.env
+# Activate a Python virtual environment if desired.  Modify ExecStart to point
+# to your venv's python.  By default it uses system python3.
+ExecStart=/usr/bin/python3 /opt/room-kiosk/app.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

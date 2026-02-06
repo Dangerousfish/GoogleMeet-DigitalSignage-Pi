@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="refresh" content="21600" />
+    <title>Rooms</title>
+
+    <style>
+      :root {
+        /* style palette */
+        --bg: #293d32;
+        --accent: #ff8fa2;
+        --black: #202124;
+        --muted: #887777;
+        --white: #ffffff;
+
+        --card: rgba(32, 33, 36, 0.86);
+        --border: rgba(255, 255, 255, 0.14);
+        --shadow: 0 26px 70px rgba(0, 0, 0, 0.45);
+        --radius: 22px;
+
+        --free: rgba(255, 255, 255, 0.92);
+        --occupied: var(--accent);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px;
+        color: var(--white);
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial,
+          sans-serif;
+
+        background:
+          radial-gradient(
+            900px 520px at 18% 12%,
+            rgba(255, 143, 162, 0.18),
+            transparent 55%
+          ),
+          radial-gradient(
+            900px 520px at 82% 30%,
+            rgba(255, 255, 255, 0.08),
+            transparent 60%
+          ),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.18)),
+          var(--bg);
+      }
+
+      .wrap {
+        width: min(1100px, 100%);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+      }
+
+      .card {
+        position: relative;
+        padding: 38px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        background:
+          radial-gradient(
+            700px 240px at 20% 10%,
+            rgba(255, 255, 255, 0.08),
+            transparent 60%
+          ),
+          linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.05),
+            rgba(255, 255, 255, 0.01)
+          ),
+          var(--card);
+        overflow: hidden;
+        transition:
+          border-color 220ms ease,
+          box-shadow 220ms ease,
+          filter 220ms ease;
+        will-change: transform;
+      }
+
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .label {
+        font-size: 22px;
+        font-weight: 650;
+        letter-spacing: 0.2px;
+      }
+
+      .pill {
+        padding: 10px 16px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 13px;
+        letter-spacing: 1.1px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.08);
+        user-select: none;
+        transition:
+          transform 220ms ease,
+          box-shadow 220ms ease,
+          border-color 220ms ease,
+          background 220ms ease;
+        position: relative;
+        z-index: 1;
+      }
+
+      .pill.free {
+        background: rgba(255, 143, 162, 0.14); /* subtle pink even when free */
+        border-color: rgba(255, 143, 162, 0.4);
+        color: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 0 0 6px rgba(255, 143, 162, 0.06);
+      }
+
+      .pill.occupied {
+        background: rgba(255, 143, 162, 0.26);
+        border-color: rgba(255, 143, 162, 0.78);
+        color: rgba(255, 228, 234, 0.98);
+        box-shadow: 0 0 0 8px rgba(255, 143, 162, 0.12);
+        transform: translateY(-1px);
+      }
+
+      .big {
+        margin-top: 34px;
+        font-size: 60px;
+        font-weight: 850;
+        letter-spacing: 0.8px;
+        transition:
+          transform 220ms ease,
+          text-shadow 220ms ease;
+        position: relative;
+        z-index: 1;
+      }
+
+      .meta {
+        margin-top: 14px;
+        font-size: 16px;
+        line-height: 1.45;
+        color: rgba(255, 255, 255, 0.82);
+        position: relative;
+        z-index: 1;
+      }
+
+      .footer {
+        margin-top: 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.72);
+        position: relative;
+        z-index: 1;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+        background: rgba(255, 255, 255, 0.25);
+        box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.05);
+        transition:
+          box-shadow 220ms ease,
+          background 220ms ease,
+          transform 220ms ease;
+        position: relative;
+        z-index: 1;
+      }
+
+      .dot.free {
+        background: var(--accent); /* free also gets pink */
+        box-shadow: 0 0 0 8px rgba(255, 143, 162, 0.14);
+      }
+
+      .dot.occupied {
+        background: var(--accent);
+        box-shadow: 0 0 0 10px rgba(255, 143, 162, 0.22);
+      }
+
+      /* Status layers for extra obviousness */
+      .card::after {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border-radius: calc(var(--radius) + 2px);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 260ms ease;
+      }
+
+      /* Free: pink signature */
+      .card.free {
+        border-color: rgba(255, 143, 162, 0.3);
+        box-shadow:
+          0 26px 70px rgba(0, 0, 0, 0.45),
+          0 0 0 1px rgba(255, 143, 162, 0.1),
+          0 0 22px rgba(255, 143, 162, 0.1);
+        filter: saturate(1.04);
+      }
+
+      .card.free::after {
+        opacity: 0.7;
+        background: radial-gradient(
+          900px 360px at 20% 10%,
+          rgba(255, 143, 162, 0.12),
+          transparent 60%
+        );
+      }
+
+      /* Occupied: strong pink highlight + aura */
+      .card.occupied {
+        border-color: rgba(255, 143, 162, 0.62);
+        box-shadow:
+          0 26px 70px rgba(0, 0, 0, 0.45),
+          0 0 0 2px rgba(255, 143, 162, 0.22),
+          0 0 55px rgba(255, 143, 162, 0.26);
+        filter: saturate(1.1);
+      }
+
+      .card.occupied::after {
+        opacity: 0.95;
+        background: radial-gradient(
+          900px 360px at 20% 10%,
+          rgba(255, 143, 162, 0.22),
+          transparent 55%
+        );
+      }
+
+      .card.occupied .big {
+        text-shadow:
+          0 0 16px rgba(255, 143, 162, 0.3),
+          0 0 46px rgba(255, 143, 162, 0.18);
+        transform: translateY(-1px);
+      }
+
+      /* Animations: pill pulse + card breathing */
+      @keyframes pulsePill {
+        0% {
+          box-shadow: 0 0 0 10px rgba(255, 143, 162, 0.12);
+          transform: translateY(-1px) scale(1);
+        }
+        60% {
+          box-shadow: 0 0 0 18px rgba(255, 143, 162, 0.06);
+          transform: translateY(-1px) scale(1.02);
+        }
+        100% {
+          box-shadow: 0 0 0 10px rgba(255, 143, 162, 0.12);
+          transform: translateY(-1px) scale(1);
+        }
+      }
+
+      .pulse {
+        animation: pulsePill 1.8s ease-in-out infinite;
+      }
+
+      @keyframes breatheCard {
+        0% {
+          transform: scale(1);
+        }
+        55% {
+          transform: scale(1.015);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .breathe {
+        animation: breatheCard 2.6s ease-in-out infinite;
+      }
+
+      /* Offline highlight */
+      .offline {
+        outline: 2px solid rgba(255, 143, 162, 0.55);
+      }
+
+      /* Big logo bottom-right */
+      .brand {
+        position: fixed;
+        right: 26px;
+        bottom: 22px;
+        display: flex;
+        align-items: center;
+        opacity: 0.95;
+        user-select: none;
+        pointer-events: none;
+        z-index: 2;
+        filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.4));
+      }
+
+      .brand img {
+        width: 220px;
+        height: auto;
+        opacity: 0.96;
+      }
+
+      @media (max-width: 900px) {
+        body {
+          padding: 24px;
+        }
+        .wrap {
+          grid-template-columns: 1fr;
+        }
+        .big {
+          font-size: 48px;
+        }
+        .brand img {
+          width: 170px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="card" id="room04-card">
+        <div class="top">
+          <div class="label" id="room04-label">Room</div>
+          <div class="pill" id="room04-pill">…</div>
+        </div>
+        <div class="big" id="room04-big">Loading</div>
+        <div class="meta" id="room04-meta">Fetching status…</div>
+        <div class="footer">
+          <div>
+            <span class="dot" id="room04-dot"></span
+            ><span id="room04-updated">—</span>
+          </div>
+          <div id="room04-next">—</div>
+        </div>
+      </div>
+
+      <div class="card" id="room05-card">
+        <div class="top">
+          <div class="label" id="room05-label">Room</div>
+          <div class="pill" id="room05-pill">…</div>
+        </div>
+        <div class="big" id="room05-big">Loading</div>
+        <div class="meta" id="room05-meta">Fetching status…</div>
+        <div class="footer">
+          <div>
+            <span class="dot" id="room05-dot"></span
+            ><span id="room05-updated">—</span>
+          </div>
+          <div id="room05-next">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- brand mark -->
+    <div class="brand" aria-hidden="true">
+      <img
+        src="https://orgLogo.png"
+        sizes="(max-width: 900px) 170px, 220px"
+        alt=""
+        decoding="async"
+        loading="eager"
+      />
+    </div>
+
+    <script>
+      function fmtTime(iso) {
+        if (!iso) return null;
+        const d = new Date(iso);
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+
+      function setRoom(prefix, data) {
+        const card = document.getElementById(`${prefix}-card`);
+        const label = document.getElementById(`${prefix}-label`);
+        const pill = document.getElementById(`${prefix}-pill`);
+        const big = document.getElementById(`${prefix}-big`);
+        const meta = document.getElementById(`${prefix}-meta`);
+        const dot = document.getElementById(`${prefix}-dot`);
+        const updated = document.getElementById(`${prefix}-updated`);
+        const next = document.getElementById(`${prefix}-next`);
+
+        // reset state classes
+        card.classList.remove("offline", "occupied", "free", "breathe");
+        pill.classList.remove("pulse");
+
+        label.textContent = `Room ${data.label}`;
+
+        const state = data.state;
+
+        pill.className = `pill ${state}`;
+        pill.textContent = state === "occupied" ? "IN USE" : "FREE";
+
+        dot.className = `dot ${state}`;
+
+        if (state === "occupied") {
+          card.classList.add("occupied", "breathe");
+          pill.classList.add("pulse");
+
+          const until = fmtTime(data.current_end);
+          big.textContent = "Occupied";
+          meta.textContent = until ? `In use until ${until}` : "In use";
+        } else {
+          card.classList.add("free");
+
+          big.textContent = "Available";
+          meta.textContent = "Ready for a walk-in";
+        }
+
+        const upd = fmtTime(data.updated_at);
+        updated.textContent = upd ? `Updated ${upd}` : "Updated";
+
+        const nextStart = fmtTime(data.next_start);
+        next.textContent = nextStart
+          ? `Next busy from ${nextStart}`
+          : "No upcoming bookings";
+      }
+
+      function setOffline() {
+        ["room04", "room05"].forEach((prefix) => {
+          const card = document.getElementById(`${prefix}-card`);
+          card.classList.add("offline");
+          card.classList.remove("occupied", "free", "breathe");
+
+          const pill = document.getElementById(`${prefix}-pill`);
+          pill.className = "pill";
+          pill.textContent = "OFFLINE";
+
+          document.getElementById(`${prefix}-big`).textContent = "Offline";
+          document.getElementById(`${prefix}-meta`).textContent =
+            "Backend not reachable";
+          document.getElementById(`${prefix}-updated`).textContent = "—";
+          document.getElementById(`${prefix}-next`).textContent = "—";
+        });
+      }
+
+      async function refresh() {
+        try {
+          const res = await fetch("/api/status", { cache: "no-store" });
+          const payload = await res.json();
+
+          if (payload.rooms && payload.rooms.room04 && payload.rooms.room05) {
+            setRoom("room04", payload.rooms.room04);
+            setRoom("room05", payload.rooms.room05);
+            return;
+          }
+
+          setOffline();
+        } catch (e) {
+          setOffline();
+        }
+      }
+
+      refresh();
+      setInterval(refresh, 10000);
+    </script>
+  </body>
+</html>
